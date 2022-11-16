@@ -1,0 +1,17 @@
+{
+    "name": "smdev/sm-router",
+    "autoload": {
+        "psr-4": {
+            "SmRouter\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Soufiane Moutaouakkil",
+            "email": "soufiane.moutaouakkil.ma@gmail.com"
+        }
+    ],
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    }
+}
