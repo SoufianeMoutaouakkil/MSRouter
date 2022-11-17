@@ -3,7 +3,7 @@
     "autoload": {
         "psr-4": {
             "SMRouter\\": "src/",
-            "Test\\": "test/"
+            "Test\\": "tests/"
         }
     },
     "authors": [
