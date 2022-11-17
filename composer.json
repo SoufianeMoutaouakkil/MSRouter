@@ -1,12 +1,12 @@
 {
-    "name": "smdev/sm-router",
+    "name": "msdev/ms-router",
     "description": "a simple router wich allows you to resolve a url with/out params and return a SMRoute insatnce",
     "type": "library",
     "license": "MIT",
     "minimum-stability": "stable",
     "autoload": {
         "psr-4": {
-            "SMDEV\\SMRouter\\": "src/",
+            "MSDEV\\MSRouter\\": "src/",
             "Test\\": "tests/"
         }
     },

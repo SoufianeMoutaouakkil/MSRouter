@@ -5,16 +5,16 @@ namespace Test;
 
 use PHPUnit\Framework\TestCase;
 
-use SMDEV\SMRouter\SMRouter;
-use SMDEV\SMRouter\SMRoute;
-use SMDEV\SMRouter\Exception\SMNotFoundException;
-use SMDEV\SMRouter\Exception\SMInvalidRoutesList;
-use SMDEV\SMRouter\Exception\SMInvalidCallback;
-use SMDEV\SMRouter\Exception\SMInvalidHttpMethodException;
+use MSDEV\MSRouter\MSRouter;
+use MSDEV\MSRouter\MSRoute;
+use MSDEV\MSRouter\Exception\MSNotFoundException;
+use MSDEV\MSRouter\Exception\MSInvalidRoutesList;
+use MSDEV\MSRouter\Exception\MSInvalidCallback;
+use MSDEV\MSRouter\Exception\MSInvalidHttpMethodException;
 
 use Test\testFiles\TestController;
 
-class SMRouterTest extends TestCase
+class MSRouterTest extends TestCase
 {
 
     private $configDir;
@@ -28,8 +28,8 @@ class SMRouterTest extends TestCase
     
     private function resetInstance()
     {
-        SMRouter::unsetInstance();
-        $this->router = SMRouter::getInstance();
+        MSRouter::unsetInstance();
+        $this->router = MSRouter::getInstance();
     }
     
     private function resetConfig()
@@ -42,16 +42,16 @@ class SMRouterTest extends TestCase
     public function testInstantiateError()
     {
         $this->expectException(\Error::class);
-        $router = new SMRouter;
+        $router = new MSRouter;
         unset($router);
     }
     
     /**
      * test Exceptions
      */
-    public function testSMNotFoundException()
+    public function testMSNotFoundException()
     {
-        $this->expectException(SMNotFoundException::class);
+        $this->expectException(MSNotFoundException::class);
         $this->resetInstance();
 
         $this->router->resolve("get", "notFoundPath");
@@ -59,7 +59,7 @@ class SMRouterTest extends TestCase
 
     public function testInvalidRoutesList()
     {
-        $this->expectException(SMInvalidRoutesList::class);
+        $this->expectException(MSInvalidRoutesList::class);
         $this->resetInstance();
 
         $this->router->addRoutes(["get" => "invalid routes list"]);
@@ -67,7 +67,7 @@ class SMRouterTest extends TestCase
 
     public function testInvalidCallbackArray()
     {
-        $this->expectException(SMInvalidCallback::class);
+        $this->expectException(MSInvalidCallback::class);
         $this->resetInstance();
 
         $this->router->addRoutes([
@@ -79,7 +79,7 @@ class SMRouterTest extends TestCase
 
     public function testInvalidCallbackClass()
     {
-        $this->expectException(SMInvalidCallback::class);
+        $this->expectException(MSInvalidCallback::class);
         $this->resetInstance();
 
         $this->router->addRoutes([
@@ -91,7 +91,7 @@ class SMRouterTest extends TestCase
 
     public function testInvalidCallbackMethod()
     {
-        $this->expectException(SMInvalidCallback::class);
+        $this->expectException(MSInvalidCallback::class);
         $this->resetInstance();
         $this->router->addRoutes([
             "get" => [
@@ -136,32 +136,32 @@ class SMRouterTest extends TestCase
     {
         // test a normal get route
         $route = $this->router->resolve("get", "path1");
-        $this->assertInstanceOf(SMRoute::class, $route);
+        $this->assertInstanceOf(MSRoute::class, $route);
         $this->assertFalse($route->isApi);
         $this->assertEqualsIgnoringCase(TestController::class, $route->controller);
         $this->assertEquals("getMethod1", $route->action);
 
         // test a normal post route
         $route = $this->router->resolve("post", "path1");
-        $this->assertInstanceOf(SMRoute::class, $route);
+        $this->assertInstanceOf(MSRoute::class, $route);
         $this->assertEqualsIgnoringCase(TestController::class, $route->controller);
         $this->assertEquals("postMethod1", $route->action);
         
         // test sensitive case of resolving route
         $routeWithDifferentCase = $this->router->resolve("get", "Path1");
-        $this->assertInstanceOf(SMRoute::class, $routeWithDifferentCase);
+        $this->assertInstanceOf(MSRoute::class, $routeWithDifferentCase);
         
         // test slashes at the begining and at the end of urls
         $routeWithDifferentCase = $this->router->resolve("get", "/Path1");
-        $this->assertInstanceOf(SMRoute::class, $routeWithDifferentCase);
+        $this->assertInstanceOf(MSRoute::class, $routeWithDifferentCase);
         $routeWithDifferentCase = $this->router->resolve("get", "Path1/");
-        $this->assertInstanceOf(SMRoute::class, $routeWithDifferentCase);
+        $this->assertInstanceOf(MSRoute::class, $routeWithDifferentCase);
         $routeWithDifferentCase = $this->router->resolve("get", "/Path1/");
-        $this->assertInstanceOf(SMRoute::class, $routeWithDifferentCase);
+        $this->assertInstanceOf(MSRoute::class, $routeWithDifferentCase);
         
         // test resolving Home Page
         $routeHome = $this->router->resolve("get", "/");
-        $this->assertInstanceOf(SMRoute::class, $routeHome);
+        $this->assertInstanceOf(MSRoute::class, $routeHome);
         $this->assertEqualsIgnoringCase(TestController::class, $routeHome->controller);
         $this->assertEquals("home", $routeHome->action);
     }
@@ -170,7 +170,7 @@ class SMRouterTest extends TestCase
     {
         // test a route with param without preg validation
         $route = $this->router->resolve("get", "paramsPath/paramvalue");
-        $this->assertInstanceOf(SMRoute::class, $route);
+        $this->assertInstanceOf(MSRoute::class, $route);
         $this->assertEquals("param", $route->action);
         $this->assertIsArray($route->params);
         $this->assertArrayHasKey("paramname", $route->params);
@@ -178,7 +178,7 @@ class SMRouterTest extends TestCase
         
         // test a route with param with preg validation
         $route = $this->router->resolve("get", "paramsPath/5");
-        $this->assertInstanceOf(SMRoute::class, $route);
+        $this->assertInstanceOf(MSRoute::class, $route);
         $this->assertEquals("digitParam", $route->action);
         $this->assertIsArray($route->params);
         $this->assertArrayHasKey("paramname", $route->params);

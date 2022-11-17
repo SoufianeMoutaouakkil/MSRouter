@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace SMDEV\SMRouter;
+namespace MSDEV\MSRouter;
 
-class SMRoute
+class MSRoute
 {
     private $params = [];
     private $controller;

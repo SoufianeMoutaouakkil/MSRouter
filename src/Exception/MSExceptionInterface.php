@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SMDEV\SMRouter\Exception;
+namespace MSDEV\MSRouter\Exception;
 
 use Throwable;
 
-interface SMExceptionInterface extends Throwable
+interface MSExceptionInterface extends Throwable
 {
     # to simplify implimentation
 }

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace SMDEV\SMRouter;
+namespace MSDEV\MSRouter;
 
-use SMDEV\SMRouter\Exception\SMInvalidHttpMethodException;
-use SMDEV\SMRouter\Exception\SMNotFoundException;
-use SMDEV\SMRouter\Exception\SMInvalidRoutesList;
-use SMDEV\SMRouter\Exception\SMInvalidCallback;
+use MSDEV\MSRouter\Exception\MSInvalidHttpMethodException;
+use MSDEV\MSRouter\Exception\MSNotFoundException;
+use MSDEV\MSRouter\Exception\MSInvalidRoutesList;
+use MSDEV\MSRouter\Exception\MSInvalidCallback;
 
-class SMRouter
+class MSRouter
 {
     private array $routes = [];
     private static $sInstance;
@@ -20,7 +20,7 @@ class SMRouter
     public static function getInstance($routesList = [])
     {
         if (is_null(self::$sInstance)) {
-            self::$sInstance = new SMRouter($routesList);
+            self::$sInstance = new MSRouter($routesList);
         }
         return self::$sInstance;
     }
@@ -43,7 +43,7 @@ class SMRouter
     {
         foreach ($routesList as $method => $routes) {
                 if (!is_array($routes)) {
-                    throw new SMInvalidRoutesList(
+                    throw new MSInvalidRoutesList(
                         "Invalid routes list.".
                         "For each HTTP method, we need an array of 'path => [controllerClass, method]' !"
                     );
@@ -98,13 +98,13 @@ class SMRouter
             $callback = $this->getCallback();
 
             if ($callback === false) {
-                throw new SMNotFoundException();
+                throw new MSNotFoundException();
             }
         } else {
             // in this case, no params must be found in the url
             $callback[] = [];
         }
-        return new SMRoute($callback[0], $callback[1], $callback[2]);
+        return new MSRoute($callback[0], $callback[1], $callback[2]);
     }
 
     /**
@@ -125,17 +125,17 @@ class SMRouter
     private function validateCallback($callback)
     {
         if (!is_array($callback)) {
-            throw new SMInvalidCallback(
+            throw new MSInvalidCallback(
                 "Invalid Callback array. ".
                 "The callback must be an array of the next form : '[controllerClass, method]'!"
             );
         } elseif (!class_exists($callback[0]) && property_exists($callback[0], $callback[1])) {
-            throw new SMInvalidCallback(
+            throw new MSInvalidCallback(
                 "Invalid Callback Class. ".
                 "The first Element of the callback array must be a defined Class!"
             );
         } elseif (!method_exists($callback[0], $callback[1])) {
-            throw new SMInvalidCallback(
+            throw new MSInvalidCallback(
                 "Invalid Callback Method. ".
                 "The second Element of the callback array must be a defined method in the Controller class!"
             );
@@ -145,7 +145,7 @@ class SMRouter
     private function validateMethod($method)
     {
         if (!in_array($method, $this->allowedMethod())) {
-            throw new SMInvalidHttpMethodException(
+            throw new MSInvalidHttpMethodException(
                 "Your routes List contains this method {$method}, wich not allowed!"
             );
         }
