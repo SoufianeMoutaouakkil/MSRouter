@@ -2,7 +2,7 @@
     "name": "smdev/sm-router",
     "autoload": {
         "psr-4": {
-            "SmRouter\\": "src/",
+            "SMRouter\\": "src/",
             "Test\\": "test/"
         }
     },

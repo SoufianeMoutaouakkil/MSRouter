@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace SMRouter;
 
-use SMRouter\Exception\SMInvalidRouteMethodException;
+use SMRouter\Exception\SMInvalidHttpMethodException;
 use SMRouter\Exception\SMNotFoundException;
+use SMRouter\Exception\SMInvalidRoutesList;
+use SMRouter\Exception\SMInvalidCallback;
 
 class SMRouter
 {
     private array $routes = [];
     private static $sInstance;
 
+    /**
+     * Singleton parts
+     */
     public static function getInstance($routesList = [])
     {
         if (is_null(self::$sInstance)) {
@@ -20,19 +25,23 @@ class SMRouter
         return self::$sInstance;
     }
 
-    private function __construct(array $routesList = [])
+    public static function unsetInstance()
     {
-        if ($routesList !== []) {
-            $this->addRoutesList($routesList);
+        if (!is_null(self::$sInstance)) {
+            self::$sInstance = null;
         }
     }
 
-    public function addRoutesList(array $routesList)
+    private function __construct(array $routesList = [])
+    {
+        if ($routesList !== []) {
+            $this->addRoutes($routesList);
+        }
+    }
+
+    public function addRoutes(array $routesList)
     {
         foreach ($routesList as $method => $routes) {
-            // validate the $method
-            if (in_array($method, $this->allowedMethod())) {
-                // validate that the routes is array
                 if (!is_array($routes)) {
                     throw new SMInvalidRoutesList(
                         "Invalid routes list.".
@@ -40,88 +49,125 @@ class SMRouter
                     );
                 }
                 foreach ($routes as $path => $callback) {
-                    $this->validateCallback($callback);
-                    $path = trim($path, '/');
-                    if (!in_array($path, $this->$routes[$method])) {
-                        $this->$routes[$method][$path] = $callback;
-                    }
+                    $this->addRoute($method, $path, $callback);
                 }
-            } else {
-                throw new SMInvalidRouteMethodException(
-                    "Your routes List contains this method {$method}, wich not allowed!"
-                );
-            }
         }
-        
     }
 
     /**
-     * New
+     * Adding routes part
+     */
+    public function get(string $path, $callback)
+    {
+        $this->addRoute("get", $path, $callback);
+    }
+
+    public function delete(string $path, $callback)
+    {
+        $this->addRoute("delete", $path, $callback);
+    }
+
+    public function post(string $path, $callback)
+    {
+        $this->addRoute("post", $path, $callback);
+    }
+
+    public function put(string $path, $callback)
+    {
+        $this->addRoute("put", $path, $callback);
+    }
+
+    /**
+     * resolving part
+     */
+    public function resolve(string $method, string $url)
+    {
+        // prepare url
+        $this->url = $this->prepareUrl($url);
+        // prepare method
+        $this->validateMethod($method);
+
+        $this->method = $method;
+
+        // search the callback
+        $callback = $this->routes[$method][$url] ?? false;
+        
+        // if no callback Found, that means that this url is a path with params or not found
+        if ($callback === false) {
+            // try to find if this url match to a path with params
+            $callback = $this->getCallback();
+
+            if ($callback === false) {
+                throw new SMNotFoundException();
+            }
+        } else {
+            // in this case, no params must be found in the url
+            $callback[] = [];
+        }
+        return new SMRoute($callback[0], $callback[1], $callback[2]);
+    }
+
+    /**
+     * private adding routes part
      */
     private function allowedMethod()
     {
         return ["get", "post", "delete", "put"];
     }
 
+    private function prepareUrl($url)
+    {
+        $url = trim($url);
+        $url = $url !== "/" ? trim($url, "/") : $url;
+        return strtolower($url);
+    }
+
     private function validateCallback($callback)
     {
-        $error = true;
-        if (is_array($callback) && class_exists($callback[0]) && property_exists($callback[0], $callback[1])) {
-            $error = false;
-        }
-        if ($error) {
-            throw new SMInvalidRoutesList(
-                "Invalid Callback.".
+        if (!is_array($callback)) {
+            throw new SMInvalidCallback(
+                "Invalid Callback array. ".
                 "The callback must be an array of the next form : '[controllerClass, method]'!"
+            );
+        } elseif (!class_exists($callback[0]) && property_exists($callback[0], $callback[1])) {
+            throw new SMInvalidCallback(
+                "Invalid Callback Class. ".
+                "The first Element of the callback array must be a defined Class!"
+            );
+        } elseif (!method_exists($callback[0], $callback[1])) {
+            throw new SMInvalidCallback(
+                "Invalid Callback Method. ".
+                "The second Element of the callback array must be a defined method in the Controller class!"
             );
         }
     }
-    
-    /**
-     * New
-     */
-    public function addRoute(string $method, string $path, $callback)
+
+    private function validateMethod($method)
     {
-        $path = trim($path, '/');
+        if (!in_array($method, $this->allowedMethod())) {
+            throw new SMInvalidHttpMethodException(
+                "Your routes List contains this method {$method}, wich not allowed!"
+            );
+        }
+    }
+
+    private function addRoute(string $method, string $path, $callback)
+    {
+        $this->validateMethod($method);
         $this->validateCallback($callback);
-
-        $this->routes[$method][$path] = $callback;
-    }
-    /**
-     * New
-     */
-    public function get(string $path, $callback)
-    {
-        $this->addRoute("get", $path, $callback);
-    }
-    /**
-     * New
-     */
-    public function delete(string $path, $callback)
-    {
-        $this->addRoute("delete", $path, $callback);
-    }
-    /**
-     * New
-     */
-    public function post(string $path, $callback)
-    {
-        $this->addRoute("post", $path, $callback);
-    }
-    /**
-     * New
-     */
-    public function put(string $path, $callback)
-    {
-        $this->addRoute("put", $path, $callback);
+        $path = $this->prepareUrl($path);
+        $routesByMethod = $this->getRoutesByMethod($method);
+        if (!in_array($path, $routesByMethod)) {
+            $this->routes[$method][$path] = $callback;
+        }
     }
 
-
+    
 
     /**
-     * New
+     * private resolving part
      */
-    public function getRoutesByMethod($method): array
+    private function getRoutesByMethod($method): array
     {
         return $this->routes[$method] ?? [];
     }
@@ -164,7 +210,8 @@ class SMRouter
                 for ($i = 1; $i < count($valueMatches); $i++) {
                     $values[] = $valueMatches[$i][0];
                 }
-                $callback[] = array_combine($routeNames, $values);
+                $params = array_combine($routeNames, $values);
+                $callback[] = $params;
                 return $callback;
             }
         }
@@ -172,29 +219,4 @@ class SMRouter
         return false;
     }
 
-    public function resolve(string $url, string $method)
-    {
-        // prepare url
-        $this->url = trim($url, '/');
-        // prepare method
-        if (!in_array($method, $this->allowedMethod())) {
-            throw new SMInvalidRouteMethodException(
-                "Your routes List contains this method {$method}, wich not allowed!"
-            );
-        }
-
-        // search the callback
-        $callback = $this->routes[$method][$url] ?? false;
-        
-        // if no callback Found, that means that this url is a path with params or not found
-        if ($callback === false) {
-            // try to find if this url match to a path with params
-            $callback = $this->getCallback();
-
-            if ($callback === false) {
-                throw new SMNotFoundException();
-            }
-        }
-        return new Route($callback[0], $callback[1], $callback[2]);
-    }
 }

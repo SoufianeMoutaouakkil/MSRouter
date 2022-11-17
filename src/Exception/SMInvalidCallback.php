@@ -6,7 +6,7 @@ namespace SMRouter\Exception;
 
 use InvalidArgumentException;
 
-final class SMInvalidRouteMethodException extends InvalidArgumentException implements SMExceptionInterface
+final class SMInvalidCallback extends InvalidArgumentException implements SMExceptionInterface
 {
     # to simplify implimentation
 }

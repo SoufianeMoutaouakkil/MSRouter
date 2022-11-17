@@ -1,104 +1,187 @@
 <?php
+declare(strict_types=1);
 
 namespace Test;
 
 use PHPUnit\Framework\TestCase;
 
 use SMRouter\SMRouter;
-use SMRouter\Exception\SMInvalidPathException;
+use SMRouter\SMRoute;
+use SMRouter\Exception\SMNotFoundException;
+use SMRouter\Exception\SMInvalidRoutesList;
+use SMRouter\Exception\SMInvalidCallback;
+use SMRouter\Exception\SMInvalidHttpMethodException;
+
+use Test\testFiles\TestController;
 
 class SMRouterTest extends TestCase
 {
 
     private $configDir;
-    private $config;
+    private $router;
 
     public function __construct()
     {
         parent::__construct();
-
         $this->configDir = (\dirname(__FILE__) . "/testFiles/");
-        $this->config = SMConfig::getInstance();
-
     }
-
     
-//*********************************************
+    private function resetInstance()
+    {
+        SMRouter::unsetInstance();
+        $this->router = SMRouter::getInstance();
+    }
+    
+    private function resetConfig()
+    {
+        $config = include $this->configDir . "routesTest.php";
+        $this->resetInstance();
+        $this->router->addRoutes($config);
+    }
+    
     public function testInstantiateError()
     {
         $this->expectException(\Error::class);
-        $config = new SMConfig;
-        unset($config);
-    }
-
-    
-    public function testSetNotFoundFileConfig()
-    {
-        $this->expectException(SMInvalidPathException::class);
-        $this->config->setConfigByFiles(
-            [ "notFound" => $this->configDir . "notFound.json"
-        ]);
+        $router = new SMRouter;
+        unset($router);
     }
     
-    public function testSetInvalidConfigNameFileConfig()
+    /**
+     * test Exceptions
+     */
+    public function testSMNotFoundException()
     {
-        $this->expectException(SMInvalidConfigNameException::class);
-        $this->config->setConfigByFiles([
-            0 => $this->configDir . "PhpConfig.json"
-        ]);
+        $this->expectException(SMNotFoundException::class);
+        $this->resetInstance();
+
+        $this->router->resolve("get", "notFoundPath");
     }
 
-    public function testSetInvalidConfigNameArrayConfig()
+    public function testInvalidRoutesList()
     {
-        $this->expectException(SMInvalidConfigNameException::class);
-        $this->config->setConfigByValues([
-            0 => "Data"
-        ]);
+        $this->expectException(SMInvalidRoutesList::class);
+        $this->resetInstance();
+
+        $this->router->addRoutes(["get" => "invalid routes list"]);
     }
 
-    public function testSetInvalidContentJsonFileConfig()
+    public function testInvalidCallbackArray()
     {
-        $this->expectException(SMInvalidFileContentException::class);
-        $this->config->setConfigByFiles(
-            [ "invalidJson" => $this->configDir . "invalidContent.json"
-        ]);
+        $this->expectException(SMInvalidCallback::class);
+        $this->resetInstance();
+
+        $this->router->addRoutes([
+            "get" => [
+                    "path1" => "invalid callbackArray"
+                ]
+            ]);
     }
 
-    public function testSetInvalidContentPhpFileConfig()
+    public function testInvalidCallbackClass()
     {
-        $this->expectException(SMInvalidFileContentException::class);
-        $this->config->setConfigByFiles(
-            [ "invalidJson" => $this->configDir . "invalidContent.php"
-        ]);
+        $this->expectException(SMInvalidCallback::class);
+        $this->resetInstance();
+
+        $this->router->addRoutes([
+            "get" => [
+                    "path1" => ["invalid class", ""]
+                ]
+            ]);
     }
 
-    public function testSetInvalidExtFileConfig()
+    public function testInvalidCallbackMethod()
     {
-        $this->expectException(SMInvalidFileExtException::class);
-        $this->config->setConfigByFiles(
-            [ "notAccepted" => $this->configDir . "Config.yml"
-        ]);
+        $this->expectException(SMInvalidCallback::class);
+        $this->resetInstance();
+        $this->router->addRoutes([
+            "get" => [
+                    "path1" => [TestController::class, ""]
+                ]
+            ]);
     }
 
-    public function testSetJsonFileConfig()
+    /**
+     * test resolving routes
+     */
+    public function testResolveConfiguratedRoutes()
     {
-        $this->config->setConfigByFiles(["json" => $this->configDir . "Config.json"]);
+        $this->resetConfig();
+        
+        // test routes without params
+        $this->testResolveRoutesWithoutParams();
 
-        $this->assertArrayHasKey("json", $_ENV);
-        $this->assertArrayHasKey("key1", $_ENV["json"]);
-        $this->assertEquals("key1Value", $_ENV["json"]["key1"]);
+        // test routes with params
+        $this->testResolveRoutesWithParams();
     }
 
-    public function testSetPhpFileConfig()
+    public function testResolveAddedRoutes()
     {
-        // test the use of a php file. it will be added to the current config in the object
-        $this->config->setConfigByFiles(["php" => $this->configDir . "Config.php"]);
+        $this->resetInstance();
+        
+        // add routes manuely
+        $this->router->get("/path1", [TestController::class, "getMethod1"]);
+        $this->router->get("/", [TestController::class, "home"]);
+        $this->router->post("/path1", [TestController::class, "postMethod1"]);
+        $this->router->get("paramsPath/{paramName:\d}", [TestController::class, "digitParam"]);
+        $this->router->get("paramsPath/{paramName}", [TestController::class, "param"]);
 
-        // make sure that the test testSetJsonFileConfig has effect on the global object of SMConfig
-        $this->assertArrayHasKey("json", $_ENV);
-        $this->assertArrayHasKey("php", $_ENV);
-        $this->assertArrayHasKey("database", $_ENV["php"]);
-        $this->assertArrayHasKey("mysql", $_ENV["php"]["database"]);
-        $this->assertEquals("root", $_ENV["php"]["database"]["mysql"]["db_user"]);
+        // test routes without params
+        $this->testResolveRoutesWithoutParams();
+
+        // test routes with params
+        $this->testResolveRoutesWithParams();
+    }
+
+    private function testResolveRoutesWithoutParams()
+    {
+        // test a normal get route
+        $route = $this->router->resolve("get", "path1");
+        $this->assertInstanceOf(SMRoute::class, $route);
+        $this->assertFalse($route->isApi);
+        $this->assertEqualsIgnoringCase(TestController::class, $route->controller);
+        $this->assertEquals("getMethod1", $route->action);
+
+        // test a normal post route
+        $route = $this->router->resolve("post", "path1");
+        $this->assertInstanceOf(SMRoute::class, $route);
+        $this->assertEqualsIgnoringCase(TestController::class, $route->controller);
+        $this->assertEquals("postMethod1", $route->action);
+        
+        // test sensitive case of resolving route
+        $routeWithDifferentCase = $this->router->resolve("get", "Path1");
+        $this->assertInstanceOf(SMRoute::class, $routeWithDifferentCase);
+        
+        // test slashes at the begining and at the end of urls
+        $routeWithDifferentCase = $this->router->resolve("get", "/Path1");
+        $this->assertInstanceOf(SMRoute::class, $routeWithDifferentCase);
+        $routeWithDifferentCase = $this->router->resolve("get", "Path1/");
+        $this->assertInstanceOf(SMRoute::class, $routeWithDifferentCase);
+        $routeWithDifferentCase = $this->router->resolve("get", "/Path1/");
+        $this->assertInstanceOf(SMRoute::class, $routeWithDifferentCase);
+        
+        // test resolving Home Page
+        $routeHome = $this->router->resolve("get", "/");
+        $this->assertInstanceOf(SMRoute::class, $routeHome);
+        $this->assertEqualsIgnoringCase(TestController::class, $routeHome->controller);
+        $this->assertEquals("home", $routeHome->action);
+    }
+
+    private function testResolveRoutesWithParams()
+    {
+        // test a route with param without preg validation
+        $route = $this->router->resolve("get", "paramsPath/paramvalue");
+        $this->assertInstanceOf(SMRoute::class, $route);
+        $this->assertEquals("param", $route->action);
+        $this->assertIsArray($route->params);
+        $this->assertArrayHasKey("paramname", $route->params);
+        $this->assertEquals("paramvalue", $route->params["paramname"]);
+        
+        // test a route with param with preg validation
+        $route = $this->router->resolve("get", "paramsPath/5");
+        $this->assertInstanceOf(SMRoute::class, $route);
+        $this->assertEquals("digitParam", $route->action);
+        $this->assertIsArray($route->params);
+        $this->assertArrayHasKey("paramname", $route->params);
+        $this->assertEquals(5, $route->params["paramname"]);
     }
 }
