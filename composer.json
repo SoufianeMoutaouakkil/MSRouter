@@ -2,7 +2,8 @@
     "name": "smdev/sm-router",
     "autoload": {
         "psr-4": {
-            "SmRouter\\": "src/"
+            "SmRouter\\": "src/",
+            "Test\\": "test/"
         }
     },
     "authors": [

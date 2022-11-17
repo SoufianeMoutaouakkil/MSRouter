@@ -66,7 +66,7 @@ class SMRouter
     private function validateCallback($callback)
     {
         $error = true;
-        if (is_array($callback) && class_exists($callback[0])) {
+        if (is_array($callback) && class_exists($callback[0]) && property_exists($callback[0], $callback[1])) {
             $error = false;
         }
         if ($error) {
@@ -76,6 +76,7 @@ class SMRouter
             );
         }
     }
+    
     /**
      * New
      */
@@ -132,8 +133,6 @@ class SMRouter
 
         // Get all routes for current request method
         $routes = $this->getRoutesByMethod($method);
-
-        $routeParams = false;
 
         // Start iterating registed routes
         foreach ($routes as $route => $callback) {
