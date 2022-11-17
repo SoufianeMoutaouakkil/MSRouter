@@ -5,12 +5,12 @@ namespace Test;
 
 use PHPUnit\Framework\TestCase;
 
-use SMRouter\SMRouter;
-use SMRouter\SMRoute;
-use SMRouter\Exception\SMNotFoundException;
-use SMRouter\Exception\SMInvalidRoutesList;
-use SMRouter\Exception\SMInvalidCallback;
-use SMRouter\Exception\SMInvalidHttpMethodException;
+use SMDEV\SMRouter\SMRouter;
+use SMDEV\SMRouter\SMRoute;
+use SMDEV\SMRouter\Exception\SMNotFoundException;
+use SMDEV\SMRouter\Exception\SMInvalidRoutesList;
+use SMDEV\SMRouter\Exception\SMInvalidCallback;
+use SMDEV\SMRouter\Exception\SMInvalidHttpMethodException;
 
 use Test\testFiles\TestController;
 

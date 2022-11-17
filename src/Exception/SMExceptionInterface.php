@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SMRouter\Exception;
+namespace SMDEV\SMRouter\Exception;
 
 use Throwable;
 
